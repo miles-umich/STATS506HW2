@@ -1,0 +1,66 @@
+---
+title: "HW2"
+author: "Margaret Miles"
+format: html
+editor: visual
+---
+
+## STATS 506 - HW1
+
+Margaret Miles
+
+## **Problem 1 - Modified Random Walk**
+
+Consider a 1-dimensional random walk with the following rules:
+
+Start at 0. At each step, move +1 or -1 with 50/50 probability. If +1 is chosen, 5% of the time move +10 instead. If -1 is chosen, 20% of the time move -3 instead. Repeat steps 2-4 times. (Note that if the +10 is chosen, it’s not +1 then +10, it is just +10.)
+
+Write a function to determine the end position of this random walk.
+
+The input and output should be:
+
+Input: The number of steps 
+Output: The final position of the walk 
+random_walk(10)
+\[1\] 4 
+random_walk(10) 
+\[1\] -11
+
+We’re going to implement this in different ways and compare them. 
+
+**a. Implement the random walk in these three versions:**
+
+Version 1: using a loop.
+
+```{r}
+
+```
+
+Version 2: using built-in R vectorized functions. (Using no loops.) (Hint: Does the order of steps matter?)
+```{r}
+
+```
+
+Version 3: Implement the random walk using one of the “apply” functions.
+```{r}
+
+```
+
+Demonstrate that all versions work by running the following:
+random_walk1(10)
+random_walk2(10)
+random_walk3(10)
+random_walk1(1000)
+random_walk2(1000)
+random_walk3(1000)
+
+```{r}
+
+```
+
+**b. Demonstrate that the three versions can give the same result. Show this for both n=10 and n=1000. (You will need to add a way to control the randomization.)**
+
+```{r}
+
+```
+
