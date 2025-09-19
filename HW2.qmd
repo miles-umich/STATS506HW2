@@ -181,14 +181,14 @@ random_walk1_same <- function(n) {
   for (i in 1:n){
     # +1 is chosen, 5% of the time move +10 
     if (steps[i] > 0) {
-      steps[i] <- sample(c(1, 10), 1, prob = c(0.95, 0.05))
+      steps[i] <- ifelse(runif(1) < 0.05, 10, 1)
     } else {
       # If -1 is chosen, 20% of the time move -3 
-      steps[i] <- sample(c(-1, -3), 1, prob = c(0.80, 0.20))
+      steps[i] <- ifelse(runif(1) < 0.20, -3, -1)
     }
   }
-  # print(steps)
   
+  # print(steps)
   # sum
   final <- sum(steps)
   return(final)
@@ -203,26 +203,23 @@ random_walk2_same <- function(n) {
   # check to see if start is the same
   # print(steps)
   
-  # find how many of each there are
-  size1 <- sum(steps == 1)
-  size2 <- sum(steps == -1)
+  # uniform random draws
+  u <- runif(n)
 
-  # +10 jump 5% of the time when base is +1
-  steps[steps == 1] <- sample(c(1, 10), size = size1, replace = TRUE, 
-                              prob = c(0.95, 0.05))
-  # print(steps)
+  # step 1: replace the +1’s
+  steps[steps == 1]  <- ifelse(u[steps == 1] < 0.05, 10, 1)
   
-  # -3 jump 20% of the time when base is -1
-  steps[steps == -1] <- sample(c(-1, -3), size = size2, replace = TRUE,
-                               prob = c(0.80, 0.20))
+  # step 2: replace the -1’s
+  steps[steps == -1] <- ifelse(u[steps == -1] < 0.20, -3, -1)
+ 
   # print(steps)
-
   # then sum to find final spot
   final <- sum(steps)
   return(final)
 }
-# version #2 walk for same result
-random_walk2_same <- function(n) {
+
+# version #3 walk for same result
+random_walk3_same <- function(n) {
   
   # set up with +1 or -1
   steps <- sample(c(1, -1), n, replace = TRUE)
@@ -230,29 +227,232 @@ random_walk2_same <- function(n) {
   # check to see if start is the same
   # print(steps)
   
-  # find how many of each there are
-  size1 <- sum(steps == 1)
-  size2 <- sum(steps == -1)
-
-  # +10 jump 5% of the time when base is +1
-  steps[steps == 1] <- sample(c(1, 10), size = size1, replace = TRUE, 
-                              prob = c(0.95, 0.05))
-  # print(steps)
-  # -3 jump 20% of the time when base is -1
-  steps[steps == -1] <- sample(c(-1, -3), size = size2, replace = TRUE,
-                               prob = c(0.80, 0.20))
-  # print(steps)
-
-  # then sum to find final spot
-  final <- sum(steps)
-  return(final)
+  # using apply function, +10 jump 5% of the time when base is +1
+  # and -3 jump 20% of the time when base is -1
+  walk <- vapply(steps, function(x){
+    if(x == 1){
+      ifelse(runif(1) < 0.05, 10, 1)
+    } else {
+      ifelse(runif(1) < 0.20, -3, -1)
+    }
+  }, numeric(1))
+  
+  # print(walk)
+  return(sum(walk))
 }
 
 set.seed(67)
 random_walk1_same(10)
 set.seed(67)
 random_walk2_same(10)
+set.seed(67)
+random_walk3_same(10)
 
+
+set.seed(67)
+random_walk1_same(1000)
+set.seed(67)
+random_walk2_same(1000)
+set.seed(67)
+random_walk3_same(1000)
+
+```
+
+**c. Use the microbenchmark package to clearly demonstrate the speed of the implementations. Compare performance with a low input (1,000) and a large input (100,000). Discuss the results.**
+
+```{r}
+library(microbenchmark)
+
+# Benchmark with n = 1,000
+set.seed(67)
+microbenchmark(
+  walk1 = random_walk1_same(1000),
+  walk2 = random_walk2_same(1000),
+  walk3 = random_walk3_same(1000)
+)
+
+# Benchmark with n = 100,000
+set.seed(67)
+microbenchmark(
+  walk1 = random_walk1_same(100000),
+  walk2 = random_walk2_same(100000),
+  walk3 = random_walk3_same(100000)
+)
 
 
 ```
+
+The results show that even in small implementation, vectorization was significantly faster. There is not much of a difference between a loop and apply, however loop is faster actually. This shows up even stronger when you run it for 10,000 times. Its extremely much faster to vectorize. My apply is longer because it calls two functions instead of 1 for the loop.
+
+**d. What is the probability that the random walk ends at 0 if the number of steps is 10? 100? 1000? Defend your answers with evidence based upon a Monte Carlo simulation.**
+
+```{r}
+#' Monte Carlo Simulation 
+#'
+#' 
+#' 
+#' @params n = number of steps
+#' @params trials = number of trials 
+#' @params seed = seed for randomness
+#' @returns results with all the information of the runs
+#' 
+#' @examples
+#' ver1(10) = 4
+#' ver1(10) = -11
+#' 
+mc_sim_prob <- function(n, trials, seed){
+  set.seed(seed)
+  
+  # set up vectors for storage
+  sums <- vector("list", 3)
+  hits <- numeric(3)
+  
+  # run each random walk over # of trials
+  sums[[1]] <- replicate(trials, random_walk1_same(n))  # N draws random walk 1(n)
+  sums[[2]] <- replicate(trials, random_walk2_same(n))  # N draws random walk 2(n)
+  sums[[3]] <- replicate(trials, random_walk3_same(n))  # N draws random walk 3(n)
+  
+  # store how many times it ends at 0
+  hits[1] <- sum(sums[[1]] == 0)
+  hits[2] <- sum(sums[[2]] == 0)
+  hits[3] <- sum(sums[[3]] == 0)
+  
+  # results in a data frame
+  results <- data.frame(
+    n = n,
+    trials = trials,
+    
+    walk1_hits   = hits[1],
+    walk1_p_hat  = hits[1] / trials,
+    walk1_ci_low = binom.test(hits[1], trials)$conf.int[1],
+    walk1_ci_up  = binom.test(hits[1], trials)$conf.int[2],
+    
+    walk2_hits   = hits[2],
+    walk2_p_hat  = hits[2] / trials,
+    walk2_ci_low = binom.test(hits[2], trials)$conf.int[1],
+    walk2_ci_up  = binom.test(hits[2], trials)$conf.int[2],
+    
+    walk3_hits   = hits[3],
+    walk3_p_hat  = hits[3] / trials,
+    walk3_ci_low = binom.test(hits[3], trials)$conf.int[1],
+    walk3_ci_up  = binom.test(hits[3], trials)$conf.int[2]
+  )
+  return(results)
+}
+
+# random walk ends at 0 if the number of steps is 10? 100? 1000?
+mc1 = mc_sim_prob(10, 10000, 67)
+mc2 = mc_sim_prob(100, 10000, 67)
+mc3 = mc_sim_prob(1000, 10000, 67)
+
+cat("Number of steps:", mc1$n, "\n",
+    "Number of MC sims:", mc1$trials, "\n",
+    "Probability of 0 steps for Walk 1:", mc1$walk1_p_hat*100, 
+    "% Lower Bound:", mc1$walk1_ci_low, 
+    " Upper Bound:", mc1$walk1_ci_up, "\n",
+    "Probability of 0 steps for Walk 2:", mc1$walk2_p_hat*100, 
+    "% Lower Bound:", mc1$walk2_ci_low, 
+    " Upper Bound:", mc1$walk2_ci_up, "\n",
+    "Probability of 0 steps for Walk 3:", mc1$walk3_p_hat*100, 
+    "% Lower Bound:", mc1$walk3_ci_low, 
+    " Upper Bound:", mc1$walk3_ci_up, "\n", "\n")
+
+cat("Number of steps:", mc2$n, "\n",
+    "Number of MC sims:", mc2$trials, "\n",
+    "Probability of 0 steps for Walk 1:", mc2$walk1_p_hat*100, 
+    "% Lower Bound:", mc2$walk1_ci_low, 
+    " Upper Bound:", mc2$walk1_ci_up, "\n",
+    "Probability of 0 steps for Walk 2:", mc2$walk2_p_hat*100, 
+    "% Lower Bound:", mc2$walk2_ci_low, 
+    " Upper Bound:", mc2$walk2_ci_up, "\n",
+    "Probability of 0 steps for Walk 3:", mc2$walk3_p_hat*100, 
+    "% Lower Bound:", mc2$walk3_ci_low, 
+    " Upper Bound:", mc2$walk3_ci_up, "\n", "\n")
+
+cat("Number of steps:", mc3$n, "\n",
+    "Number of MC sims:", mc3$trials, "\n",
+    "Probability of 0 steps for Walk 1:", mc3$walk1_p_hat*100, 
+    "% Lower Bound:", mc3$walk1_ci_low, 
+    " Upper Bound:", mc3$walk1_ci_up, "\n",
+    "Probability of 0 steps for Walk 2:", mc3$walk2_p_hat*100, 
+    "% Lower Bound:", mc3$walk2_ci_low, 
+    " Upper Bound:", mc3$walk2_ci_up, "\n",
+    "Probability of 0 steps for Walk 3:", mc3$walk3_p_hat*100, 
+    "% Lower Bound:", mc3$walk3_ci_low, 
+    " Upper Bound:", mc3$walk3_ci_up, "\n", "\n")
+```
+
+## **Problem 2 - Mean of Mixture of Distributions**
+
+The number of cars passing an intersection is a classic example of a Poisson distribution. At a particular intersection, Poisson is an appropriate distribution most of the time, but during rush hours (hours of 8am and 5pm) the distribution is really normally distributed with a much higher mean.
+
+**Using a Monte Carlo simulation, estimate the average number of cars that pass an intersection under the following assumptions:**
+
+- From midnight until 7 AM, the distribution of cars per hour is Poisson with mean 1.
+- From 9am to 4pm, the distribution of cars per hour is Poisson with mean 8. 
+- From 6pm to 11pm, the distribution of cars per hour is Poisson with mean 12. 
+- During rush hours (8am and 5pm), the distribution of cars per hour is Normal with mean 60 and variance 12 Accomplish this without using any loops.
+
+(Hint: This can be done with extremely minimal code.)
+
+```{r}
+# trails
+n = 10000
+
+# From midnight until 7:59 AM, the distribution of cars per hour is Poisson with mean 1.
+time1 <- mean(rpois(n, 1))
+
+# From 9am to 4pm, the distribution of cars per hour is Poisson with mean 8. 
+time2 <- mean(rpois(n, 8))
+
+# From 6pm to 11:59pm, the distribution of cars per hour is Poisson with mean 12. 
+time3 <- mean(rpois(n, 12))
+
+# During rush hours (8am and 5pm), the distribution of cars per hour is 
+# Normal with mean 60 and variance 12 
+time4 <- mean(rnorm(n, mean = 60, sd = 12))
+
+#sum over all hours the average for a day
+cars <- time1*8 + time2*7 + time3*6 + time4*2
+print(cars)
+```
+
+## **Problem 3 - Linear Regression**
+
+Use the following code to download the YouTube Superbowl commercials data:
+```{r}
+youtube <- read.csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-03-02/youtube.csv')
+```
+
+Information about this data can be found at https://github.com/rfordatascience/tidytuesday/tree/main/data/2021/2021-03-02. The research question for this project is to decide which of several attributes, if any, is associated with increased YouTube engagement metrics.
+
+**a. Often in data analysis, we need to de-identify it. This is more important for studies of people, but let’s carry it out here. Remove any column that might uniquely identify a commercial. This includes but isn’t limited to things like brand, any URLs, the YouTube channel, or when it was published. Report the dimensions of the data after removing these columns.**
+
+```{r}
+# remove all idenfying columns
+youtube_deID <- youtube[, !(names(youtube) %in% 
+   c("brand", "superbowl_ads_dot_com_url", "youtube_url", 
+     "title", "description", "thumbnail"))]
+
+```
+
+**b. For each of the following variables, examine their distribution.**
+
+Determine whether i) The variable could be used as is as the outcome in a linear regression model, ii) The variable can use a transformation prior to being used as the outcome in a linear regression model, or iii) The variable would not be appropriate to use as the outcome in a linear regression model.
+
+```{r}
+
+
+```
+
+For each variable, report which category it falls in. If it requires a transformation, carry such a transformation out and use that transformation going forward.
+
+- View counts
+- Like counts
+- Dislike counts
+- Favorite counts
+- Comment counts
+(Hint: At least the majority of these variables are appropriate to use.)
+
+
+
