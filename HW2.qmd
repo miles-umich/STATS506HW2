@@ -432,18 +432,14 @@ Information about this data can be found at https://github.com/rfordatascience/t
 # remove all idenfying columns
 youtube_deID <- youtube[, !(names(youtube) %in% 
    c("brand", "superbowl_ads_dot_com_url", "youtube_url", 
-     "title", "description", "thumbnail"))]
+     "title", "description", "thumbnail", "channel_title"))]
 
+dim(youtube_deID)
 ```
 
 **b. For each of the following variables, examine their distribution.**
 
 Determine whether i) The variable could be used as is as the outcome in a linear regression model, ii) The variable can use a transformation prior to being used as the outcome in a linear regression model, or iii) The variable would not be appropriate to use as the outcome in a linear regression model.
-
-```{r}
-
-
-```
 
 For each variable, report which category it falls in. If it requires a transformation, carry such a transformation out and use that transformation going forward.
 
@@ -454,5 +450,74 @@ For each variable, report which category it falls in. If it requires a transform
 - Comment counts
 (Hint: At least the majority of these variables are appropriate to use.)
 
+```{r}
+# examine distribution of view count
+hist(youtube_deID$view_count)
+hist(log10(youtube_deID$view_count), breaks = 50, main="Log10 view counts")
+# view count has some very large numbers, meaning that if I do a log transformation I can see it more clearly and show that it has a relatively normal distribution. It might have some outliers but nothing crazy so I'm going to log transform it for the dataset
+youtube_deID$view_count <- log10(youtube_deID$view_count)
+# remove view counts that are NA
+youtube_deID <- subset(youtube_deID, !is.na(view_count))
 
 
+#examine distribution of like count
+hist(youtube_deID$like_count)
+hist(log10(youtube_deID$like_count), breaks = 50, main="Log10 view counts")
+hist(sqrt(youtube_deID$like_count), breaks = 50, main="sqrt view counts")
+# like count has a lot of zeros, so it might be helpful to separate those out into their own column
+youtube_deID$zero_likes <- youtube_deID$like_count == 0
+youtube_deID$like_count[youtube_deID$like_count == 0] <- NA
+# try to also do it with 1 or 0
+youtube_deID$zero_likes <- youtube_deID$like_count < 3
+youtube_deID$like_count[youtube_deID$like_count < 3] <- NA
+
+# this looks reasonably normal with these edits, so I would just log transform it
+youtube_deID$like_count <- log10(youtube_deID$like_count)
+hist(youtube_deID$like_count)
+
+# examine distribution of dislike count
+hist(youtube_deID$dislike_count)
+hist(log10(youtube_deID$dislike_count + 1), breaks = 50, main="Log10 dislike counts")
+
+# lots of zeros again, and a few 1s so remove them 
+youtube_deID$zero_dislikes <- youtube_deID$dislike_count < 1
+youtube_deID$dislike_count[youtube_deID$like_count < 1] <- NA
+# remove counts that are NA
+youtube_deID <- subset(youtube_deID, !is.na(dislike_count))
+hist(log10(youtube_deID$dislike_count), breaks = 50, main="Log10 dislike counts")
+# this looks good now to use for a linear regression
+
+# examine distribution of fav count
+hist(youtube_deID$favorite_count)
+# favorite is almost all zero, meaning that we should not use it at all for the linear regression
+
+# examine distribution of comment count
+hist(youtube_deID$comment_count)
+hist(log10(youtube_deID$comment_count + 1), breaks = 50, main="Log10 comment counts")
+
+# lots of zeros again, and a few 1s so remove them 
+youtube_deID$zero_comments <- youtube_deID$comment_count < 1
+youtube_deID$comment_count[youtube_deID$comment_count < 1] <- NA
+# remove counts that are NA
+youtube_deID <- subset(youtube_deID, !is.na(comment_count))
+hist(log10(youtube_deID$comment_count), breaks = 50, main="Log10 comment counts")
+# this looks good now to use for a linear regression
+
+
+```
+
+**c. For each variable in part b. that are appropriate, fit a linear regression model predicting them based upon each of the seven binary flags for characteristics of the ads, such as whether it is funny. Control for year as a continuous covariate.**
+
+Discuss the results. Identify the direction of any statistically significant results.
+
+```{r}
+
+
+```
+
+**d. Consider only the outcome of view counts. Calculate manually (without using lm) by first creating a proper design matrix, then using matrix algebra to estimate. Confirm that you get the same result as lm did in part c.**
+
+```{r}
+
+
+```
