@@ -388,10 +388,10 @@ The number of cars passing an intersection is a classic example of a Poisson dis
 
 **Using a Monte Carlo simulation, estimate the average number of cars that pass an intersection under the following assumptions:**
 
-- From midnight until 7 AM, the distribution of cars per hour is Poisson with mean 1.
-- From 9am to 4pm, the distribution of cars per hour is Poisson with mean 8. 
-- From 6pm to 11pm, the distribution of cars per hour is Poisson with mean 12. 
-- During rush hours (8am and 5pm), the distribution of cars per hour is Normal with mean 60 and variance 12 Accomplish this without using any loops.
+-   From midnight until 7 AM, the distribution of cars per hour is Poisson with mean 1.
+-   From 9am to 4pm, the distribution of cars per hour is Poisson with mean 8.
+-   From 6pm to 11pm, the distribution of cars per hour is Poisson with mean 12.
+-   During rush hours (8am and 5pm), the distribution of cars per hour is Normal with mean 60 and variance 12 Accomplish this without using any loops.
 
 (Hint: This can be done with extremely minimal code.)
 
@@ -420,6 +420,7 @@ print(cars)
 ## **Problem 3 - Linear Regression**
 
 Use the following code to download the YouTube Superbowl commercials data:
+
 ```{r}
 youtube <- read.csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-03-02/youtube.csv')
 ```
@@ -443,12 +444,11 @@ Determine whether i) The variable could be used as is as the outcome in a linear
 
 For each variable, report which category it falls in. If it requires a transformation, carry such a transformation out and use that transformation going forward.
 
-- View counts
-- Like counts
-- Dislike counts
-- Favorite counts
-- Comment counts
-(Hint: At least the majority of these variables are appropriate to use.)
+-   View counts
+-   Like counts
+-   Dislike counts
+-   Favorite counts
+-   Comment counts (Hint: At least the majority of these variables are appropriate to use.)
 
 ```{r}
 # examine distribution of view count
@@ -458,7 +458,6 @@ hist(log10(youtube_deID$view_count), breaks = 50, main="Log10 view counts")
 youtube_deID$view_count <- log10(youtube_deID$view_count)
 # remove view counts that are NA
 youtube_deID <- subset(youtube_deID, !is.na(view_count))
-
 
 #examine distribution of like count
 hist(youtube_deID$like_count)
@@ -511,13 +510,42 @@ hist(log10(youtube_deID$comment_count), breaks = 50, main="Log10 comment counts"
 Discuss the results. Identify the direction of any statistically significant results.
 
 ```{r}
+summary(youtube_deID)
 
+# Fit models
+m_view <- lm(view_count ~ funny + show_product_quickly + patriotic + celebrity + danger + animals + use_sex + year, data = youtube_deID)
+m_like <- lm(like_count ~ funny + show_product_quickly + patriotic + celebrity + danger + animals + use_sex + year, data = youtube_deID)
+m_dislike <- lm(dislike_count ~ funny + show_product_quickly + patriotic + celebrity + danger + animals + use_sex + year, data = youtube_deID)
+m_comment <- lm(comment_count ~ funny + show_product_quickly + patriotic + celebrity + danger + animals + use_sex + year, data = youtube_deID)
 
+#### print model results ####
+summary(m_view)
+# Weak fit, low R^2, patriotic sig. positive correlation
+summary(m_like)
+# Modest/Weak fit = ok R^2, only year sig. positive correlation
+summary(m_dislike)
+# Bad fit, no sig. predictors
+summary(m_comment)
+# /Weak fit = low R^2, patriotic and year sig. positive correlation.
 ```
 
 **d. Consider only the outcome of view counts. Calculate manually (without using lm) by first creating a proper design matrix, then using matrix algebra to estimate. Confirm that you get the same result as lm did in part c.**
 
 ```{r}
+# Use the same filtered modeling data
+# youtube_deID
 
+# y is view count with log transformation
+y <- youtube_deID$view_count
 
+# Model matrix including intercept
+X <- model.matrix(~ funny + show_product_quickly + patriotic + celebrity + danger + animals + use_sex + year, data = youtube_deID)
+
+# Closed-form OLS solution
+b_hat <- solve(t(X) %*% X, t(X) %*% y)
+
+# Compare to part c
+print(coef(m_view))
+print(b_hat)
+# they are the same result
 ```
